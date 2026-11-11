@@ -4,7 +4,7 @@
 **Document Type:** Technical Architecture and System Design  
 **Project Name:** SchemaLink  
 **Status:** Approved  
-**Version:** 1.0  
+**Version:** 2.0 (LLM & RAG Engineering Edition)  
 **Target Repository:** `/Users/muhamadtalebi/Developer/SchemaLink`
 
 ---
@@ -12,22 +12,26 @@
 ## 1. Executive Summary
 
 ### 1.1 Problem Statement
-In enterprise environments with large, complex multi-database ecosystems (hundreds or thousands of tables and tens of thousands of columns), attempting to build Text-to-SQL or database Q&A systems presents major pitfalls:
-1. **Raw Data Vectorization Failure:** Embedding actual database records into a vector database is cost-prohibitive, creates massive security and privacy risks, and fails to handle analytical aggregations (e.g., `SUM`, `AVG`, `GROUP BY`) across millions of rows.
-2. **Context Window Saturation:** Providing entire database DDLs to LLMs exceeds context windows, dramatically increases token costs, and induces hallucinations.
-3. **Namespace & Column Ambiguity:** Identical or similar column names (e.g., `created_at`, `status`, `id`, `amount`) across dozens of tables confuse retrieval and generation models.
-4. **Broken Join Paths:** Independent table retrieval often selects endpoints (e.g., `customers` and `products`) but misses necessary bridge tables (e.g., `orders` and `order_items`).
+In enterprise environments with large, complex multi-database ecosystems (hundreds of tables and tens of thousands of columns), standard approaches to database Q&A and Text-to-SQL fail:
+1. **Raw Data Vectorization Failure:** Embedding actual database records into a vector database is cost-prohibitive, creates massive security and privacy risks, and cannot compute exact analytical aggregations (`SUM`, `AVG`, `GROUP BY`) across millions of rows.
+2. **Context Window Saturation:** Providing entire database DDLs to LLMs exceeds context windows, explodes token costs, and induces hallucinations.
+3. **Namespace & Column Ambiguity:** Identical or generic column names (`created_at`, `status`, `id`, `amount`) across dozens of tables cause severe lexical collisions and retrieval noise.
+4. **Broken Join Paths:** Independent table retrieval often retrieves endpoints (e.g., `customers` and `products`) but drops necessary intermediate bridge tables (e.g., `orders` and `order_items`).
+5. **Filter Value Mismatches:** Queries contain natural language filter values (e.g., "California" or "Active") that do not lexically match raw database enum literals (e.g., `'CA'` or `1`), resulting in zero-row SQL outputs.
 
 ### 1.2 Proposed Solution: SchemaLink
-**SchemaLink** is an independent, high-precision **Schema RAG Engine**. Instead of embedding business rows, it indexes structured schema metadata and human-injected business knowledge into a multi-layered hybrid index.
+**SchemaLink** is an independent, high-precision **Schema RAG Engine**. Instead of embedding business records, it indexes structured database schema metadata, low-cardinality categorical profiles, and human-injected business knowledge into a multi-layered hybrid index.
 
 At query time, SchemaLink:
-1. Routes the natural language query to the relevant target database(s).
-2. Performs bidirectional hybrid retrieval across table and column documents.
-3. Traverses an in-memory relationship graph to discover and inject valid join paths and intermediate bridge tables.
-4. Operates in either **Autonomous Mode** (fully automated filtering) or **Human-in-the-Loop (HITL) Mode** (interactive inspection and feedback).
-5. Emits a compact, validated schema context package directly to any downstream Query Generation Agent.
-6. Learns from human feedback using an exemplar memory store to improve future retrieval accuracy.
+1. Performs semantic intent decomposition (extracting measures, dimensions, filters, and schema hints).
+2. Routes the query to target database(s) using a Database Profile Index.
+3. Executes bidirectional hybrid retrieval across table and column documents (Dense + BM25 merged via RRF).
+4. Employs a 2nd-stage Cross-Encoder Reranker to filter out generic column false-positives.
+5. Traverses an in-memory relationship graph (NetworkX) to discover deterministic join paths and inject intermediate bridge tables.
+6. Enforces Token Budgeting and Compact Serialization (Markdown DDL or JSON) to minimize LLM token consumption.
+7. Operates in either **Autonomous Mode** (fully automated filtering) or **Human-in-the-Loop (HITL) Mode** (interactive inspection and feedback via LangGraph).
+8. Emits a curated, validated schema context package directly to any downstream Query Generation Agent or LLM via REST, MCP, Python SDK, or Framework Tools.
+9. Learns from human feedback using an Exemplar Memory Store to boost future retrieval accuracy.
 
 ---
 
@@ -35,25 +39,31 @@ At query time, SchemaLink:
 
 ### 2.1 Scope Boundaries
 * **In Scope:**
-  * Multi-database connection and automated metadata introspection.
+  * Multi-database connection and automated metadata introspection (PostgreSQL, MySQL, SQLite, MSSQL, Snowflake).
+  * Low-cardinality categorical value profiling (enum literals and code lists).
   * User injection of business logic, semantic synonyms, and virtual/logical foreign keys.
-  * Multi-granularity document modeling (Database, Table, Column, Relationship).
+  * Multi-granularity document modeling (Database, Table, Column, Categorical).
+  * Query intent decomposition and schema-oriented query expansion.
   * Hybrid retrieval (Dense Vector + BM25 sparse vectors) with Reciprocal Rank Fusion (RRF).
+  * 2nd-stage Cross-Encoder Reranking for high-precision filtering.
   * Graph-based join path and bridge table discovery.
-  * Dual-mode execution (Autonomous vs. Human-in-the-Loop).
-  * Feedback storage and dynamic exemplar-based retrieval boosting.
-  * Structured schema context output contract for downstream agents.
+  * Token-budgeted context formatting (Compact DDL / Structured JSON).
+  * Dual-mode execution (Autonomous vs. Human-in-the-Loop via LangGraph).
+  * Continuous learning via Exemplar Memory and relationship graph reinforcement.
+  * Downstream agent interfaces (REST, MCP Server, LangChain/LlamaIndex tools, Python SDK).
+  * Security defenses against metadata prompt injection and PII leakage.
 * **Out of Scope:**
   * Direct SQL query generation or execution against operational data (delegated to the downstream agent).
   * Vectorizing or storing raw database row records.
   * Modifying source database schemas or executing DDL/DML.
 
 ### 2.2 Guiding Architectural Principles
-1. **Decoupled Architecture:** Schema retrieval must function as an independent service, decoupled from query synthesis.
-2. **Zero Row Vectorization:** The operational database remains the sole source of truth for business data; the vector store stores metadata and domain knowledge only.
-3. **Multi-Granular Decomposition:** Table-level discovery and column-level metric matching are distinct operations.
-4. **Deterministic Join Integrity:** Join paths are resolved via deterministic graph algorithms (NetworkX) over physical foreign keys and validated logical relations, not LLM guesses.
-5. **Continuous Learning:** User corrections in HITL mode directly reinforce future retrieval via exemplar memory without requiring model fine-tuning.
+1. **Decoupled Architecture:** Schema retrieval operates as a standalone service, independent of SQL generation.
+2. **Zero Row Vectorization:** Operational databases remain the sole source of truth for business data; the vector database indexes schema metadata, categorical values, and domain knowledge only.
+3. **Multi-Granular Decomposition:** Table discovery and column-level metric matching are treated as distinct, bidirectional search operations.
+4. **Deterministic Join Integrity:** Join paths are resolved via deterministic graph algorithms over physical foreign keys and validated logical relations, avoiding LLM hallucinations.
+5. **Token Efficiency:** Context serializers maximize information density while minimizing token footprint through intelligent column pruning.
+6. **Continuous Learning:** User corrections in HITL mode directly reinforce future retrieval via exemplar memory without model fine-tuning.
 
 ---
 
@@ -61,114 +71,129 @@ At query time, SchemaLink:
 
 | Layer | Selected Technology | Architectural Rationale |
 | :--- | :--- | :--- |
-| **Agent & Workflow Engine** | **LangGraph** | Native support for stateful workflows, checkpoints, and Human-in-the-Loop `interrupt` / `resume` execution. |
-| **Metadata Introspection** | **SQLAlchemy** | Vendor-agnostic dialect abstraction supporting PostgreSQL, MySQL, SQLite, MSSQL, Oracle, and Snowflake. |
-| **Hybrid Search & Vector Store**| **Qdrant** | Unified engine supporting dense vectors, native BM25 sparse vectors, and payload metadata filtering. Embedded mode for local development; server mode for production. |
-| **Graph Relationship Engine** | **NetworkX** | Lightweight, high-speed in-memory directed multigraph for finding shortest and k-shortest join paths and bridge tables. |
-| **Embeddings** | **FastEmbed (`BAAI/bge-m3` or `bge-small-en-v1.5`)** | Lightweight ONNX runtime embeddings without heavy PyTorch dependencies; high performance on CPU/GPU. |
+| **Agent & Workflow Engine** | **LangGraph** | Stateful workflow orchestration, checkpoint persistence, and native Human-in-the-Loop `interrupt` / `resume` execution. |
+| **Metadata Introspection** | **SQLAlchemy** | Dialect-agnostic catalog inspection for PostgreSQL, MySQL, SQLite, MSSQL, Oracle, and Snowflake. |
+| **Hybrid Search & Vector Store**| **Qdrant** | Unified engine supporting dense vectors, BM25 sparse vectors, and payload metadata filtering. Supports embedded local mode and containerized production deployment. |
+| **Graph Relationship Engine** | **NetworkX** | Lightweight in-memory directed multigraph for computing shortest join paths, Steiner minimal trees, and bridge table injection. |
+| **Embeddings** | **FastEmbed (`BAAI/bge-m3` or `bge-small-en-v1.5`)** | Fast ONNX runtime embeddings without PyTorch overhead; high throughput on CPU and GPU. |
+| **2nd-Stage Reranking** | **FlashRank / `bge-reranker-base`** | Ultralight cross-encoder for re-scoring top candidate tables and columns against query intent. |
 | **SQL Validation & Inspection**| **SQLGlot** | Robust SQL AST parsing, validation of schema references, and dialect transpilation. |
+| **Context Serialization** | **Tiktoken / Custom Tokenizer** | Precise token budgeting and compaction to prevent context window overflow. |
 | **API & Data Validation** | **FastAPI + Pydantic v2** | High-performance asynchronous REST API with strict request/response data contracts. |
+| **Model Context Protocol** | **mcp-python SDK** | Native MCP server implementation for Cursor, Claude Desktop, and modern AI environments. |
 
 ---
 
-## 4. System Architecture & Components
+## 4. End-to-End System Architecture
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                          SchemaLink Engine                             │
-│                                                                        │
-│   ┌─────────────────────────┐            ┌─────────────────────────┐   │
-│   │   Database Connectors   │            │ Business Logic Registry │   │
-│   │  (SQLAlchemy Inspector) │            │  (Custom Rules / Joins) │   │
-│   └────────────┬────────────┘            └────────────┬────────────┘   │
-│                │                                      │                │
-│                └──────────────────┬───────────────────┘                │
-│                                   ▼                                    │
-│                    ┌────────────────────────────┐                      │
-│                    │ Metadata Normalization &   │                      │
-│                    │ Document Generator         │                      │
-│                    └──────────────┬─────────────┘                      │
-│                                   ▼                                    │
-│       ┌───────────────────────────────────────────────────────┐        │
-│       │ Storage & Indexing                                    │        │
-│       │  • DB Index (Qdrant)                                  │        │
-│       │  • Table Index (Dense + BM25)                         │        │
-│       │  • Column Index (Dense + BM25)                        │        │
-│       │  • Exemplar Memory Index (Past Feedback)              │        │
-│       │  • In-Memory Relationship Graph (NetworkX)            │        │
-│       └───────────────────────────┬───────────────────────────┘        │
-│                                   ▼                                    │
-│   User Question ───────► ┌─────────────────────────┐                   │
-│                          │ Query Router & Planner  │                   │
-│                          └────────────┬────────────┘                   │
-│                                       ▼                                │
-│                          ┌─────────────────────────┐                   │
-│                          │ Bidirectional Retrieval │                   │
-│                          │ (Table-first + Col-1st) │                   │
-│                          └────────────┬────────────┘                   │
-│                                       ▼                                │
-│                          ┌─────────────────────────┐                   │
-│                          │ Graph Join Resolver     │                   │
-│                          │ (Bridge Table Discovery)│                   │
-│                          └────────────┬────────────┘                   │
-│                                       ▼                                │
-│                          ┌─────────────────────────┐                   │
-│                          │ Mode Selection Switch   │                   │
-│                          └─────┬─────────────┬─────┘                   │
-│                                │             │                         │
-│             Autonomous Mode    │             │  HITL Mode              │
-│             (Direct Context)   │             ▼                         │
-│                                │      ┌──────────────┐                 │
-│                                │      │ LangGraph    │                 │
-│                                │      │ Interrupt    │                 │
-│                                │      └──────┬───────┘                 │
-│                                │             │ User Feedback           │
-│                                │             ▼                         │
-│                                │      ┌──────────────┐                 │
-│                                │      │ Exemplar &   │                 │
-│                                │      │ Graph Boost  │                 │
-│                                │      └──────┬───────┘                 │
-│                                └──────┬──────┘                         │
-│                                       ▼                                │
-│                     [ Curated Schema Context Package ]                 │
-└───────────────────────────────────────┬────────────────────────────────┘
-                                        │
-                                        ▼
-                     ┌────────────────────────────────────┐
-                     │ Downstream Query Generator Agent   │
-                     │ (Generates SQL & Queries DB)       │
-                     └────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 SchemaLink Engine                                      │
+│                                                                                        │
+│   ┌─────────────────────────┐   ┌─────────────────────────┐   ┌────────────────────┐   │
+│   │   Database Connectors   │   │ Business Logic Registry │   │ Categorical Value  │   │
+│   │  (SQLAlchemy Inspector) │   │ (Custom Rules / Joins)  │   │ Profiler (Enums)   │   │
+│   └────────────┬────────────┘   └────────────┬────────────┘   └─────────┬──────────┘   │
+│                │                             │                          │              │
+│                └──────────────────────┬──────┴──────────────────────────┘              │
+│                                       ▼                                                │
+│                      ┌─────────────────────────────────┐                               │
+│                      │ Metadata Normalization Engine & │                               │
+│                      │ Multi-Document Generator        │                               │
+│                      └────────────────┬────────────────┘                               │
+│                                       ▼                                                │
+│         ┌─────────────────────────────────────────────────────────────┐                │
+│         │ Hybrid Storage & Relationship Topology                      │                │
+│         │  • Database Index (Qdrant: Domain & DB Profiles)            │                │
+│         │  • Table Index (Qdrant: Dense + BM25)                       │                │
+│         │  • Column Index (Qdrant: Dense + BM25 + Enums)              │                │
+│         │  • Exemplar Memory Store (Qdrant: Query ↔ Approved Schema)  │                │
+│         │  • In-Memory Relationship Graph (NetworkX MultiDiGraph)     │                │
+│         └─────────────────────────────┬───────────────────────────────┘                │
+│                                       ▼                                                │
+│   User Question ───────────► ┌─────────────────────────────────┐                       │
+│                              │ Query Intent & Decomposition    │                       │
+│                              │ (Measures, Dimensions, Filters) │                       │
+│                              └────────────────┬────────────────┘                       │
+│                                       ▼                                                │
+│                              ┌─────────────────────────────────┐                       │
+│                              │ Multi-DB Routing Layer          │                       │
+│                              └────────────────┬────────────────┘                       │
+│                                       ▼                                                │
+│                              ┌─────────────────────────────────┐                       │
+│                              │ Bidirectional Hybrid Retrieval  │                       │
+│                              │ (Table-first + Column-first)    │                       │
+│                              └────────────────┬────────────────┘                       │
+│                                       ▼                                                │
+│                              ┌─────────────────────────────────┐                       │
+│                              │ RRF Candidate Fusion &          │                       │
+│                              │ 2nd-Stage Cross-Encoder Rerank  │                       │
+│                              └────────────────┬────────────────┘                       │
+│                                       ▼                                                │
+│                              ┌─────────────────────────────────┐                       │
+│                              │ Graph Join Path & Bridge Finder │                       │
+│                              └────────────────┬────────────────┘                       │
+│                                       ▼                                                │
+│                              ┌─────────────────────────────────┐                       │
+│                              │ Mode Selection Switch           │                       │
+│                              └───────┬─────────────────┬───────┘                       │
+│                                      │                 │                               │
+│                   Autonomous Mode    │                 │  HITL Mode                    │
+│                   (Direct Context)   │                 ▼                               │
+│                                      │          ┌──────────────┐                       │
+│                                      │          │ LangGraph    │                       │
+│                                      │          │ Interrupt    │                       │
+│                                      │          └──────┬───────┘                       │
+│                                      │                 │ User Feedback                 │
+│                                      │                 ▼                               │
+│                                      │          ┌──────────────┐                       │
+│                                      │          │ Exemplar &   │                       │
+│                                      │          │ Graph Boost  │                       │
+│                                      │          └──────┬───────┘                       │
+│                                      └─────────┬───────┘                               │
+│                                                ▼                                       │
+│                              ┌──────────────────────────────────┐                      │
+│                              │ Token Budgeting & Compactor      │                      │
+│                              │ (Compact DDL / Structured JSON)  │                      │
+│                              └─────────────────┬────────────────┘                      │
+│                                                ▼                                       │
+│                                [ Curated Schema Context Package ]                      │
+└────────────────────────────────────────────────┬───────────────────────────────────────┘
+                                                 │
+                                                 ▼
+             ┌───────────────────────────────────────────────────────────────────┐
+             │ Downstream Query Generator Agent / LLM                            │
+             │   • Consumption: REST API / MCP Server / Python SDK / Tools       │
+             │   • Generates SQL using strictly the curated schema context       │
+             │   • Validates AST and executes on operational database            │
+             └───────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 5. Detailed Component Specifications
 
-### 5.1 Metadata Extraction & Normalization
-* **Connector Interface (`src/connectors/base.py`):** Abstract class defining methods:
-  * `get_database_metadata()`
-  * `get_tables()`
-  * `get_columns(table_name)`
-  * `get_primary_keys(table_name)`
-  * `get_foreign_keys(table_name)`
-  * `get_table_comments(table_name)` / `get_column_comments(table_name, column_name)`
-* **Normalized Metadata Model (`src/models/metadata.py`):**
-  * Preserves exact physical identifiers without destructive normalization.
-  * Encapsulates `database_id`, `schema_name`, `table_name`, `columns` (name, type, nullable, PK), and `foreign_keys`.
+### 5.1 Metadata Extraction & Categorical Profiler
+* **Database Connector (`src/connectors/base.py`):**
+  * Generic SQLAlchemy inspector capturing table names, schema names, column types, nullability, primary keys, foreign keys, and comments.
+* **Categorical Value Profiler (`src/catalog/profiler.py`):**
+  * Discovers low-cardinality categorical columns ($\le 50$ distinct values, e.g., `status`, `country_code`, `tier`).
+  * Gathers distinct value sets and stores them in column metadata.
+  * When a user question references a natural language label (e.g., "pending transactions"), the column index matches against the enum profile (`['PENDING', 'APPROVED', 'CANCELLED']`), solving literal mismatch errors.
 
 ### 5.2 Business Logic & Semantic Injection Layer
-Allows domain experts to enrich raw physical database structures via API or configuration:
-1. **Database Annotations:**
-   * Business domain classification (e.g., `["e-commerce", "logistics", "payments"]`).
-   * Description of the database's business scope.
-2. **Table Annotations:**
-   * Business synonyms (e.g., `tbl_ord_mstr` $\rightarrow$ `["orders", "customer purchases", "sales"]`).
-   * Default business rules (e.g., "Filter out `is_test = true` and `deleted_at IS NOT NULL`").
-3. **Column Annotations:**
-   * Business definitions & calculation formulas (e.g., `orders.rev_net` $\rightarrow$ "Gross amount minus returns and tax").
-   * Business abbreviations and metric names.
+Domain experts enrich physical database schemas with business logic via API (`src/registry/business_logic.py`):
+1. **Database Level:**
+   * Business domain classification (e.g., `["sales", "e-commerce", "fulfillment"]`).
+   * High-level narrative description of the database's business purpose.
+2. **Table Level:**
+   * Business synonyms (e.g., `tbl_ord_hdr` $\rightarrow$ `["orders", "customer purchases", "sales receipts"]`).
+   * Mandatory business rules (e.g., "Exclude test accounts where `is_test = true`").
+3. **Column Level:**
+   * Metric definitions & calculations (e.g., `orders.net_amt` $\rightarrow$ "Gross total minus discounts and refunds").
+   * Synonyms and acronyms (e.g., `arr` $\rightarrow$ "Annual Recurring Revenue").
 4. **Logical Relationship Injection:**
-   * Defines virtual joins when physical foreign keys are omitted in the DB schema:
+   * Defines virtual joins when physical foreign keys are absent:
      ```json
      {
        "source_table": "orders",
@@ -181,7 +206,19 @@ Allows domain experts to enrich raw physical database structures via API or conf
      ```
 
 ### 5.3 Multi-Granular Document Generation
-The document builder transforms raw and enriched metadata into 4 indexable structures:
+The document builder transforms raw schema and business knowledge into 4 indexable structures:
+
+#### Database Document
+```json
+{
+  "document_id": "db_sales",
+  "document_type": "database",
+  "database_id": "sales_db",
+  "domains": ["sales", "orders", "inventory", "customers"],
+  "description": "Primary transactional database for e-commerce orders and customer accounts",
+  "content_hash": "a1b2c3..."
+}
+```
 
 #### Table Document
 ```json
@@ -191,10 +228,11 @@ The document builder transforms raw and enriched metadata into 4 indexable struc
   "database_id": "sales_db",
   "schema": "public",
   "table_name": "orders",
-  "description": "Customer purchase orders and fulfillment status",
-  "business_terms": ["orders", "sales transactions", "purchases"],
-  "column_names": ["id", "customer_id", "total_amount", "order_date", "status"],
-  "content_hash": "a1b2c3d4..."
+  "description": "Customer purchase transactions and order fulfillment state",
+  "business_terms": ["orders", "sales", "purchases", "transactions"],
+  "business_rules": ["Filter orders with status = 'COMPLETED' for revenue metrics"],
+  "column_names": ["id", "customer_id", "total_amount", "status", "created_at"],
+  "content_hash": "d4e5f6..."
 }
 ```
 
@@ -209,109 +247,147 @@ The document builder transforms raw and enriched metadata into 4 indexable struc
   "data_type": "numeric(12,2)",
   "is_primary_key": false,
   "description": "Total monetary amount charged including taxes and shipping",
-  "business_terms": ["revenue", "sales volume", "order total", "gross spending"],
-  "parent_table_description": "Customer purchase orders",
-  "content_hash": "e5f6g7h8..."
+  "business_terms": ["revenue", "order value", "sales total", "gross spending"],
+  "categorical_values": [],
+  "parent_table_description": "Customer purchase transactions",
+  "content_hash": "g7h8i9..."
 }
 ```
 
 ---
 
-## 6. Retrieval & Resolution Engine
+## 6. Retrieval, Reranking & Graph Resolution
 
-### 6.1 Multi-Database Routing
-* Queries are first evaluated against the **Database Index**.
-* Matches question intent against database descriptions and domain tags.
-* Emits target `database_id` to constrain subsequent searches, preventing cross-database noise.
+### 6.1 Query Intent Decomposition
+Before vector lookup, a lightweight pre-processor extracts:
+* **Measures / Metrics:** e.g., "total revenue", "average order value".
+* **Dimensions:** e.g., "branch", "customer tier", "date".
+* **Filter Conditions & Literals:** e.g., "California", "last quarter", "active".
+* **Schema Hints:** Extracted entity keywords used for dense + BM25 keyword matching.
 
-### 6.2 Bidirectional Hybrid Retrieval
-Retrieval runs two parallel paths merged using Reciprocal Rank Fusion (RRF):
-1. **Table-First Retrieval:**
-   * Hybrid search (Dense embedding + BM25) over Table documents.
-   * Finds tables whose descriptions or business names match the query.
-   * Fetches columns associated with these candidate tables.
-2. **Column-First Retrieval:**
-   * Hybrid search across all Column documents in the target database.
-   * Matches specific metrics, dimensions, and attributes (e.g., "net revenue", "postal code").
-   * Promotes the parent tables of high-scoring columns.
-3. **RRF Candidate Merging:**
-   * RRF score formula: $RRF(d) = \sum_{m \in M} \frac{1}{60 + rank_m(d)}$.
-   * Merges and de-duplicates candidate tables and columns while tracking provenance.
+### 6.2 Multi-Database Routing
+1. Evaluates query against the **Database Index**.
+2. Ranks database profiles by cosine similarity and domain match.
+3. Selects the target `database_id` to constrain subsequent searches, eliminating cross-database namespace collision.
 
-### 6.3 Graph Join Resolution & Bridge Table Discovery
-1. **Graph Construction:**
-   * In-memory NetworkX `MultiDiGraph`.
+### 6.3 Bidirectional Hybrid Retrieval & Reranking
+1. **Parallel Retrieval Paths:**
+   * **Table-First:** Dense vector + BM25 search over Table Documents $\rightarrow$ yields top candidate tables.
+   * **Column-First:** Dense vector + BM25 search over Column Documents (matching metrics, dimensions, and categorical values) $\rightarrow$ promotes parent tables of high-scoring columns.
+2. **Reciprocal Rank Fusion (RRF):**
+   * Combines rankings: $RRF(d) = \sum_{m \in M} \frac{1}{60 + rank_m(d)}$.
+3. **2nd-Stage Cross-Encoder Reranker (`FlashRank`):**
+   * Evaluates `(query, table_summary)` pairs for top-30 candidates to eliminate generic lexical collisions.
+   * Produces calibrated confidence scores for candidate tables and columns.
+
+### 6.4 Graph Join Path Resolution & Bridge Table Discovery
+1. **NetworkX Relationship Graph:**
    * Nodes: Tables.
-   * Edges: Physical foreign keys (weight: 1.0) + User-injected virtual joins (weight: 0.95) + Discovered relationships (weight: $\le 0.8$).
-2. **Bridge Discovery:**
-   * When retrieved candidate tables are not directly connected (e.g., `customers` and `products`), the resolver computes the all-pairs shortest paths.
-   * Intermediate bridge tables (e.g., `orders`, `order_items`) and join conditions are automatically injected into the schema context.
+   * Edges: Directed links representing physical foreign keys (weight: 1.0) and user-injected virtual joins (weight: 0.95).
+2. **Bridge Discovery Algorithm:**
+   * Given candidate tables $T = \{t_1, t_2, \dots, t_k\}$, finds the minimum connecting subgraph (approximate Steiner Tree / all-pairs shortest paths).
+   * Identifies missing intermediate bridge tables (e.g., connects `customers` and `products` via `orders` and `order_items`).
+   * Automatically adds bridge tables and join conditions to the schema context.
 
 ---
 
-## 7. Execution Modes: Autonomous vs. Human-in-the-Loop (HITL)
+## 7. Dual Execution Modes: Autonomous vs. HITL
 
 ### 7.1 Mode A: Autonomous Mode
-* High-confidence candidate tables and columns above a dynamic threshold are auto-selected.
-* Join paths are resolved deterministically.
-* Produces final **Curated Schema Context Package** immediately.
+* Suitable for automated pipelines, APIs, and headless agents.
+* Automatically selects tables and columns exceeding dynamic confidence thresholds ($\ge 0.70$).
+* Resolves shortest join paths deterministically.
+* Serializes the curated context and hands off immediately.
 
 ### 7.2 Mode B: Human-in-the-Loop (HITL) Mode
-* Implemented using **LangGraph `interrupt`**.
-* The execution graph pauses and emits a review payload:
+* Powered by **LangGraph `interrupt` / `resume`**.
+* The graph pauses at an interrupt checkpoint and returns a structured inspection payload:
   ```json
   {
-    "session_id": "sess_102938",
-    "query": "Total revenue per branch last quarter",
-    "status": "awaiting_human_feedback",
+    "session_id": "sess_827361",
+    "query": "Show monthly revenue by branch in California",
+    "status": "awaiting_feedback",
     "candidate_database": "sales_db",
     "candidate_tables": [
-      {"table": "branches", "confidence": 0.94, "selected": true, "reason": "matches dimension 'branch'"},
-      {"table": "orders", "confidence": 0.89, "selected": true, "reason": "matches metric 'revenue'"},
-      {"table": "branch_audits", "confidence": 0.42, "selected": false, "reason": "low lexical match"}
+      {"table": "branches", "confidence": 0.96, "selected": true, "reason": "matches dimension 'branch' and filter 'California'"},
+      {"table": "orders", "confidence": 0.91, "selected": true, "reason": "matches metric 'revenue'"},
+      {"table": "branch_audits", "confidence": 0.38, "selected": false, "reason": "low relevance score"}
     ],
     "candidate_columns": [
+      {"table": "branches", "column": "state", "selected": true, "enum_match": "CA"},
       {"table": "branches", "column": "branch_name", "selected": true},
       {"table": "orders", "column": "total_amount", "selected": true},
-      {"table": "orders", "column": "order_date", "selected": true}
+      {"table": "orders", "column": "created_at", "selected": true}
     ],
     "suggested_joins": [
       {
         "source": "orders.branch_id",
         "target": "branches.id",
         "selected": true,
-        "type": "foreign_key"
+        "type": "physical_foreign_key"
       }
     ]
   }
   ```
-* **User Feedback Actions:**
-  * Toggle table/column selections (include/exclude).
-  * Add custom missing tables/columns.
-  * Confirm or override join paths.
+* **User Feedback Options:**
+  * Toggle table/column checkboxes (include/exclude).
+  * Add custom missing tables or columns.
+  * Confirm or re-route join paths.
 * **Resume & Continuous Learning:**
-  * Client calls `/api/v1/retrieval/feedback` or resumes LangGraph state.
-  * Approved context is forwarded to the downstream Query Agent.
-  * The approved selection is stored in the **Exemplar Memory Store** to boost similar future queries.
+  * The graph resumes with approved schema selections.
+  * Approved pairs `(query, approved_tables, approved_columns, approved_joins)` are indexed in the **Exemplar Memory Store**.
+  * Future queries with similar embeddings boost the approved tables and join edges.
 
 ---
 
-## 8. Output Contract: Curated Schema Context Package
+## 8. Output Contract & Token Budgeting Engine
 
-SchemaLink outputs a strictly typed JSON payload for the downstream Query Generator Agent:
+SchemaLink provides two serialization formats to support downstream agents with strict token budgets:
 
+### 8.1 Compact DDL Serialization (Default, High Token Efficiency)
+Compresses schema context by 40–60% compared to verbose JSON:
+```sql
+-- Database: sales_db (PostgreSQL)
+-- Query: "Show monthly revenue by branch in California"
+-- Business Rules:
+-- 1. Filter orders where status = 'COMPLETED'
+-- 2. Revenue corresponds to orders.total_amount
+
+CREATE TABLE branches (
+  id bigint PRIMARY KEY,
+  branch_name varchar(255),
+  state varchar(2) -- Values: ['CA', 'NY', 'TX', ...]
+  -- 12 other columns omitted
+);
+
+CREATE TABLE orders (
+  id bigint PRIMARY KEY,
+  branch_id bigint, -- FK -> branches.id
+  total_amount numeric(12,2),
+  status varchar(30),
+  created_at timestamp
+  -- 28 other columns omitted
+);
+
+-- Join Paths:
+-- orders.branch_id = branches.id
+```
+
+### 8.2 Structured JSON Serialization (`CuratedSchemaContext`)
+For programmatic inspection and agent tools:
 ```json
 {
   "database_id": "sales_db",
   "engine_type": "postgresql",
-  "query": "Total revenue per branch last quarter",
+  "query": "Show monthly revenue by branch in California",
   "selected_tables": [
     {
       "table_name": "branches",
-      "description": "Company physical branch locations",
+      "description": "Company branch locations",
       "columns": [
         {"name": "id", "type": "bigint", "is_primary_key": true},
-        {"name": "branch_name", "type": "varchar(255)", "is_primary_key": false}
+        {"name": "branch_name", "type": "varchar(255)", "is_primary_key": false},
+        {"name": "state", "type": "varchar(2)", "is_primary_key": false, "matched_literal": "CA"}
       ]
     },
     {
@@ -321,7 +397,7 @@ SchemaLink outputs a strictly typed JSON payload for the downstream Query Genera
         {"name": "id", "type": "bigint", "is_primary_key": true},
         {"name": "branch_id", "type": "bigint", "is_primary_key": false},
         {"name": "total_amount", "type": "numeric(12,2)", "is_primary_key": false},
-        {"name": "order_date", "type": "timestamp", "is_primary_key": false}
+        {"name": "created_at", "type": "timestamp", "is_primary_key": false}
       ]
     }
   ],
@@ -335,67 +411,90 @@ SchemaLink outputs a strictly typed JSON payload for the downstream Query Genera
     }
   ],
   "business_rules": [
-    "Always filter orders with status = 'COMPLETED'",
-    "Revenue is calculated from orders.total_amount"
+    "Filter orders where status = 'COMPLETED'",
+    "Revenue corresponds to orders.total_amount"
   ],
   "provenance": {
-    "mode": "hitl_approved",
-    "retrieval_strategy": "bidirectional_hybrid_rrf",
-    "confidence_score": 0.96
+    "mode": "autonomous",
+    "retrieval_strategy": "bidirectional_hybrid_rrf_rerank",
+    "confidence_score": 0.94
   }
 }
 ```
 
 ---
 
-## 9. API Specification
+## 9. Security, Governance & Injection Defense
 
-### Database Management & Introspection
-* `POST /api/v1/databases`: Register a database connection URI and options.
-* `POST /api/v1/databases/{database_id}/index`: Run full schema introspection and indexing.
-* `POST /api/v1/databases/{database_id}/sync`: Incremental sync detecting schema diffs via content hashes.
-
-### Business Logic Injection
-* `POST /api/v1/databases/{database_id}/annotations`: Add or update domain annotations, synonyms, table rules, and virtual relationships.
-* `GET /api/v1/databases/{database_id}/annotations`: Retrieve all registered business annotations.
-
-### Schema Retrieval & HITL Workflow
-* `POST /api/v1/retrieval/schema`: Run schema retrieval. Accepts `query`, `mode` (`autonomous` or `hitl`), and `thresholds`.
-* `POST /api/v1/retrieval/{session_id}/feedback`: Submit human review modifications and resume workflow.
+1. **Metadata-Only Principle:** SchemaLink connects with strict read-only metadata permissions (`GRANT SELECT ON pg_catalog` / `information_schema`). No operational records are accessed or vectorized.
+2. **Metadata Prompt Injection Defense:** All database comments, table names, and user annotations are escaped and sanitized. Descriptions are wrapped in structured data envelopes rather than raw system instructions to prevent prompt injection from malicious DB comments.
+3. **Role-Based Access Control (RBAC):** Supports permission tagging (`allowed_roles: ["finance", "admin"]`). Schema retrieval filters out tables that the calling user or agent lacks permission to view.
+4. **Credential Isolation:** Database connection strings are stored encrypted in environment variables or key vaults; credentials are never exposed in logs, outputs, or agent payloads.
 
 ---
 
 ## 10. Agent & LLM Integration Interfaces
 
-To enable seamless plug-and-play integration with downstream Query Generator Agents and LLMs, SchemaLink provides 4 dedicated consumption interfaces:
-
 ### 10.1 Model Context Protocol (MCP) Server (`src/integrations/mcp_server.py`)
-* Standard MCP tool: `retrieve_schema(query: str, database_id: Optional[str] = None, mode: str = "autonomous")`
-* Plug-and-play with Cursor, Claude Desktop, Antigravity, and any MCP-compatible client.
-* Returns the structured schema context directly to the model's active tool context.
+Exposes SchemaLink as a plug-and-play MCP tool for Cursor, Claude Desktop, Antigravity, and MCP clients:
+* **Tool Name:** `retrieve_schema`
+* **Input Schema:**
+  * `query` (str): Natural language question.
+  * `database_id` (optional str): Target database identifier.
+  * `mode` (str, default `"autonomous"`): Retrieval mode (`"autonomous"` or `"hitl"`).
+  * `max_tokens` (int, default `2000`): Maximum token budget for schema output.
+* **Output:** Curated Compact DDL or Schema JSON.
 
-### 10.2 Agent Tool / Function Calling (`src/integrations/tools.py`)
-* Pre-built tool adapters for major agent frameworks:
-  * **LangChain / LangGraph:** `@tool def retrieve_schema_tool(...)`
-  * **LlamaIndex:** `FunctionTool.from_defaults(fn=retrieve_schema)`
-  * **OpenAI / Anthropic Function Calling:** Ready-to-use JSON Schema definitions for zero-boilerplate tool binding.
+### 10.2 Agent Framework Tools (`src/integrations/tools.py`)
+Pre-packaged wrappers for:
+* **LangChain / LangGraph:** `@tool def retrieve_schema_tool(query: str) -> str`
+* **LlamaIndex:** `FunctionTool.from_defaults(fn=retrieve_schema)`
+* **OpenAI / Anthropic Function Calling:** Ready-to-use JSON Schema definitions.
 
-### 10.3 Native Python SDK (`schemalink.Client`)
-* For in-process agent workflows running in the same Python environment:
-  ```python
-  from schemalink import SchemaLink
+### 10.3 Native Python SDK (`src/integrations/client.py`)
+```python
+from schemalink import SchemaLink
 
-  engine = SchemaLink(config_path="schemalink.yaml")
-  context = await engine.retrieve(query="Show revenue by branch for last quarter")
-  # Returns CuratedSchemaContext pydantic model directly
-  ```
+engine = SchemaLink(config_path="schemalink.yaml")
+schema_context = await engine.retrieve(
+    query="Show monthly revenue by branch in California",
+    mode="autonomous",
+    format="compact_ddl"
+)
+print(schema_context.to_prompt())
+```
 
-### 10.4 REST API & Webhooks
-* Language-agnostic HTTP JSON interface (`POST /api/v1/retrieval/schema`) for distributed microservice architectures.
+### 10.4 REST API Specification
+* `POST /api/v1/databases`: Register a database connection.
+* `POST /api/v1/databases/{database_id}/index`: Run schema introspection and indexing.
+* `POST /api/v1/databases/{database_id}/sync`: Incremental sync detecting schema diffs via SHA-256 content hashes.
+* `POST /api/v1/databases/{database_id}/annotations`: Add or update business synonyms, formulas, and virtual foreign keys.
+* `POST /api/v1/retrieval/schema`: Run schema retrieval (`autonomous` or `hitl`).
+* `POST /api/v1/retrieval/{session_id}/feedback`: Submit human review modifications and resume workflow.
 
 ---
 
-## 11. Repository Directory Structure
+## 11. Incremental Synchronization & Versioning
+
+1. **Deterministic Hashing:** Computes SHA-256 content hashes over column names, types, constraints, and business annotations.
+2. **Change Detection:** Detects added, modified, or dropped tables and columns without full index re-computation.
+3. **Atomic Blue/Green Index Swapping:** Qdrant collections use version aliases (`sales_db_v1` $\rightarrow$ `sales_db_v2`). The active alias is updated atomically upon index verification, ensuring zero-downtime retrieval during syncs.
+
+---
+
+## 12. Evaluation & Benchmarking Suite
+
+SchemaLink incorporates a dedicated evaluation framework (`src/evaluation/`):
+* **Schema Recall@K:** Fraction of ground-truth tables and columns successfully retrieved.
+* **Schema Precision@K:** Fraction of retrieved tables and columns that are actually required.
+* **Join Path Accuracy:** Percentage of queries where the retrieved join paths form a valid, minimal connecting tree.
+* **Token Reduction Ratio:** Percentage reduction in schema tokens compared to full database DDL.
+* **Retrieval Latency:** Sub-150ms target for complete bidirectional retrieval and graph resolution.
+* **Supported Benchmarks:** Compatible with Spider, BIRD, and Snowflake SQL Schema Retrieval Benchmark.
+
+---
+
+## 13. Repository Directory Structure
 
 ```text
 SchemaLink/
@@ -416,19 +515,31 @@ SchemaLink/
 │   │   ├── mysql.py
 │   │   ├── sqlite.py
 │   │   └── factory.py
-│   ├── models/
-│   │   ├── metadata.py
-│   │   ├── documents.py
-│   │   └── context.py
+│   ├── catalog/
+│   │   ├── introspection.py
+│   │   ├── profiler.py
+│   │   ├── models.py
+│   │   └── change_detector.py
 │   ├── registry/
 │   │   └── business_logic.py
 │   ├── indexing/
 │   │   ├── document_builder.py
 │   │   ├── hybrid_store.py
-│   │   └── exemplar_store.py
+│   │   ├── exemplar_store.py
+│   │   └── embeddings.py
+│   ├── retrieval/
+│   │   ├── query_parser.py
+│   │   ├── router.py
+│   │   ├── bidirectional.py
+│   │   ├── reranker.py
+│   │   └── rrf.py
 │   ├── graph/
 │   │   ├── schema_graph.py
 │   │   └── path_finder.py
+│   ├── context/
+│   │   ├── compactor.py
+│   │   ├── tokenizer.py
+│   │   └── serializers.py
 │   ├── workflow/
 │   │   ├── state.py
 │   │   ├── nodes.py
@@ -437,8 +548,12 @@ SchemaLink/
 │   │   ├── mcp_server.py
 │   │   ├── tools.py
 │   │   └── client.py
+│   ├── evaluation/
+│   │   ├── metrics.py
+│   │   └── runner.py
 │   └── utils/
-│       └── hashing.py
+│       ├── hashing.py
+│       └── security.py
 ├── tests/
 │   ├── unit/
 │   ├── integration/
@@ -450,20 +565,26 @@ SchemaLink/
 
 ---
 
-## 12. Implementation Phasing
+## 14. Implementation Phasing Roadmap
 
-1. **Phase 1: Database Catalog Introspection & Business Registry**
-   * SQLAlchemy generic connector + SQLite / PostgreSQL testing fixtures.
+1. **Phase 1: Catalog Introspection, Profiler & Business Registry**
+   * SQLAlchemy generic connector + SQLite / PostgreSQL test fixtures.
+   * Low-cardinality categorical value profiler.
    * Business Logic Registry for injecting domain metadata, column formulas, and virtual foreign keys.
 2. **Phase 2: Hybrid Indexing & Document Builders**
    * Multi-granularity document modeling (Database, Table, Column).
    * FastEmbed embedding generation + Qdrant hybrid storage (dense + BM25).
 3. **Phase 3: Bidirectional Retrieval & NetworkX Join Resolver**
    * Table-first and Column-first retrieval merged via RRF.
+   * FlashRank 2nd-stage reranker.
    * Shortest-path join discovery with bridge table injection.
-4. **Phase 4: LangGraph Workflow & HITL Loop**
+4. **Phase 4: Token Budgeting & Compaction Engine**
+   * Compact DDL and Structured JSON context serializers.
+   * Intelligent column pruning with token constraints.
+5. **Phase 5: LangGraph Workflow & HITL Loop**
    * Dual-mode state machine (Autonomous vs. Interrupt/Resume).
    * Feedback recording and Exemplar Memory index.
-5. **Phase 5: FastAPI REST Endpoints & End-to-End Testing**
-   * Expose all registration, indexing, retrieval, and feedback endpoints.
-   * Integration tests with multi-table complex schemas.
+6. **Phase 6: Integrations, API & Evaluation**
+   * MCP Server, LangChain/LlamaIndex tools, Python SDK.
+   * FastAPI REST endpoints.
+   * Automated benchmark suite (Recall@K, Join Accuracy, Token Reduction).

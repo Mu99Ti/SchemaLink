@@ -1,11 +1,15 @@
-# SchemaLink
-### High-Precision Schema RAG & Discovery Engine for Text-to-SQL
+<div align="center">
+  <img src="assets/banner.svg" alt="SchemaLink Banner" width="100%" />
 
-[![CI Tests](https://img.shields.io/badge/tests-12%20passed-brightgreen?style=flat-square)](https://github.com/anomalyco/schemalink)
-[![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue?style=flat-square)](https://pypi.org/project/schemalink/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
-[![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square)](https://github.com/astral-sh/ruff)
-[![Architecture: Decoupled](https://img.shields.io/badge/architecture-decoupled-purple?style=flat-square)](https://github.com/anomalyco/schemalink)
+  # SchemaLink
+  ### High-Precision Schema RAG & Discovery Engine for Text-to-SQL
+
+  [![CI Tests](https://img.shields.io/badge/tests-12%20passed-brightgreen?style=flat-square)](https://github.com/Mu99Ti/SchemaLink)
+  [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue?style=flat-square)](https://pypi.org/project/schemalink/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+  [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg?style=flat-square)](https://github.com/astral-sh/ruff)
+  [![Architecture: Decoupled](https://img.shields.io/badge/architecture-decoupled-purple?style=flat-square)](https://github.com/Mu99Ti/SchemaLink)
+</div>
 
 > **SchemaLink** is an independent, high-precision Schema RAG engine that solves context window overflow, hallucinations, and join fragmentation in enterprise Text-to-SQL systems -- without vectorizing a single database row.
 

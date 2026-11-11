@@ -365,7 +365,37 @@ SchemaLink outputs a strictly typed JSON payload for the downstream Query Genera
 
 ---
 
-## 10. Repository Directory Structure
+## 10. Agent & LLM Integration Interfaces
+
+To enable seamless plug-and-play integration with downstream Query Generator Agents and LLMs, SchemaLink provides 4 dedicated consumption interfaces:
+
+### 10.1 Model Context Protocol (MCP) Server (`src/integrations/mcp_server.py`)
+* Standard MCP tool: `retrieve_schema(query: str, database_id: Optional[str] = None, mode: str = "autonomous")`
+* Plug-and-play with Cursor, Claude Desktop, Antigravity, and any MCP-compatible client.
+* Returns the structured schema context directly to the model's active tool context.
+
+### 10.2 Agent Tool / Function Calling (`src/integrations/tools.py`)
+* Pre-built tool adapters for major agent frameworks:
+  * **LangChain / LangGraph:** `@tool def retrieve_schema_tool(...)`
+  * **LlamaIndex:** `FunctionTool.from_defaults(fn=retrieve_schema)`
+  * **OpenAI / Anthropic Function Calling:** Ready-to-use JSON Schema definitions for zero-boilerplate tool binding.
+
+### 10.3 Native Python SDK (`schemalink.Client`)
+* For in-process agent workflows running in the same Python environment:
+  ```python
+  from schemalink import SchemaLink
+
+  engine = SchemaLink(config_path="schemalink.yaml")
+  context = await engine.retrieve(query="Show revenue by branch for last quarter")
+  # Returns CuratedSchemaContext pydantic model directly
+  ```
+
+### 10.4 REST API & Webhooks
+* Language-agnostic HTTP JSON interface (`POST /api/v1/retrieval/schema`) for distributed microservice architectures.
+
+---
+
+## 11. Repository Directory Structure
 
 ```text
 SchemaLink/
@@ -403,6 +433,10 @@ SchemaLink/
 │   │   ├── state.py
 │   │   ├── nodes.py
 │   │   └── graph.py
+│   ├── integrations/
+│   │   ├── mcp_server.py
+│   │   ├── tools.py
+│   │   └── client.py
 │   └── utils/
 │       └── hashing.py
 ├── tests/
@@ -416,7 +450,7 @@ SchemaLink/
 
 ---
 
-## 11. Implementation Phasing
+## 12. Implementation Phasing
 
 1. **Phase 1: Database Catalog Introspection & Business Registry**
    * SQLAlchemy generic connector + SQLite / PostgreSQL testing fixtures.

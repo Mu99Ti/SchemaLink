@@ -1,191 +1,238 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="100%" height="100%">
   <defs>
     <!-- Deep Canvas Background -->
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#05070B" />
-      <stop offset="50%" stop-color="#080C14" />
-      <stop offset="100%" stop-color="#040609" />
+    <linearGradient id="bgCanvas" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#04060A" />
+      <stop offset="60%" stop-color="#060A12" />
+      <stop offset="100%" stop-color="#020306" />
     </linearGradient>
 
-    <!-- Problem Glow (Red / Warning) -->
-    <radialGradient id="redGlow" cx="22%" cy="60%" r="50%">
-      <stop offset="0%" stop-color="#EF4444" stop-opacity="0.12" />
+    <!-- Focal Ambient Optics -->
+    <radialGradient id="prismGlow" cx="72%" cy="50%" r="45%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.14" />
+      <stop offset="50%" stop-color="#0284C7" stop-opacity="0.04" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="subtleGlow" cx="20%" cy="30%" r="40%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.05" />
       <stop offset="100%" stop-color="#000000" stop-opacity="0" />
     </radialGradient>
 
-    <!-- Solution Glow (Cyan / Electric Blue) -->
-    <radialGradient id="cyanGlow" cx="78%" cy="60%" r="50%">
-      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.16" />
-      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
-    </radialGradient>
-
-    <!-- Card Backgrounds -->
-    <linearGradient id="badCardBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#181014" stop-opacity="0.85" />
-      <stop offset="100%" stop-color="#0D080A" stop-opacity="0.95" />
-    </linearGradient>
-    <linearGradient id="goodCardBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#081826" stop-opacity="0.85" />
-      <stop offset="100%" stop-color="#040C14" stop-opacity="0.95" />
-    </linearGradient>
-
-    <!-- Borders -->
-    <linearGradient id="badBorder" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#EF4444" stop-opacity="0.6" />
-      <stop offset="100%" stop-color="#7F1D1D" stop-opacity="0.2" />
-    </linearGradient>
-    <linearGradient id="goodBorder" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.7" />
-      <stop offset="100%" stop-color="#0284C7" stop-opacity="0.2" />
-    </linearGradient>
-
-    <!-- Text Gradients -->
-    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="60%" stop-color="#E2E8F0" />
-      <stop offset="100%" stop-color="#00F0FF" />
-    </linearGradient>
-
-    <!-- Grid Pattern -->
-    <pattern id="dotGrid" width="32" height="32" patternUnits="userSpaceOnUse">
-      <circle cx="2" cy="2" r="1" fill="#334155" fill-opacity="0.25" />
+    <!-- Precision Grid Pattern -->
+    <pattern id="dotGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="0.8" fill="#334155" fill-opacity="0.3" />
     </pattern>
 
-    <!-- Top Bevel -->
-    <linearGradient id="topLine" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#EF4444" stop-opacity="0.8" />
-      <stop offset="50%" stop-color="#64748B" stop-opacity="0.3" />
-      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.9" />
+    <!-- Horizon Bevel Line -->
+    <linearGradient id="laserLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.9" />
+      <stop offset="40%" stop-color="#38BDF8" stop-opacity="0.5" />
+      <stop offset="80%" stop-color="#6366F1" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Beam & Pathway Gradients -->
+    <linearGradient id="beamGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#334155" stop-opacity="0.2" />
+      <stop offset="60%" stop-color="#00F0FF" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.9" />
+    </linearGradient>
+
+    <!-- Hero Card Surface -->
+    <linearGradient id="resolvedCard" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0C1A2E" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#060E1A" stop-opacity="0.95" />
+    </linearGradient>
+    <linearGradient id="resolvedBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0.2" />
     </linearGradient>
   </defs>
 
   <style>
-    .mono { font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace; }
-    .sans { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; }
+    .font-sans { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Geist", "Segoe UI", Roboto, sans-serif; }
+    .font-mono { font-family: "JetBrains Mono", "Geist Mono", "SF Mono", "Fira Code", monospace; }
   </style>
 
-  <!-- Background Canvas -->
-  <rect width="1280" height="640" fill="url(#bg)" />
-  <rect width="1280" height="640" fill="url(#redGlow)" />
-  <rect width="1280" height="640" fill="url(#cyanGlow)" />
+  <!-- Canvas Surface -->
+  <rect width="1280" height="640" fill="url(#bgCanvas)" />
+  <rect width="1280" height="640" fill="url(#subtleGlow)" />
+  <rect width="1280" height="640" fill="url(#prismGlow)" />
   <rect width="1280" height="640" fill="url(#dotGrid)" />
 
-  <!-- Top Razor Line -->
-  <line x1="0" y1="0" x2="1280" y2="0" stroke="url(#topLine)" stroke-width="2.5" />
+  <!-- Top Laser Horizon Line -->
+  <line x1="0" y1="0" x2="1280" y2="0" stroke="url(#laserLine)" stroke-width="2.5" />
 
-  <!-- ==================== HEADER BRANDING ==================== -->
-  <g transform="translate(80, 50)">
-    <!-- Badge -->
-    <rect width="320" height="26" rx="4" fill="#0B132B" stroke="#00F0FF" stroke-width="0.8" stroke-opacity="0.5" />
-    <circle cx="14" cy="13" r="3.5" fill="#00F0FF" />
-    <text x="26" y="17" fill="#00F0FF" font-size="11" font-weight="700" class="mono" letter-spacing="1">SCHEMA RAG &amp; JOIN GRAPH ENGINE</text>
+  <!-- ==================== LEFT COLUMN: THE HOOK & VALUE PROPOSITION ==================== -->
+  <g transform="translate(88, 0)">
+    <!-- Taxonomic Badge -->
+    <g transform="translate(0, 115)">
+      <rect width="250" height="28" rx="6" fill="#090E17" stroke="#1E293B" stroke-width="1" />
+      <circle cx="14" cy="14" r="3.5" fill="#00F0FF" />
+      <text x="26" y="18" fill="#38BDF8" font-size="11" font-weight="600" class="font-mono" letter-spacing="1">SCHEMA RAG ENGINE</text>
+    </g>
 
-    <!-- Title -->
-    <text x="0" y="70" fill="url(#brandGrad)" font-size="46" font-weight="800" class="sans" letter-spacing="-1.5">
+    <!-- Product Title -->
+    <text x="0" y="215" fill="#FFFFFF" font-size="64" font-weight="800" class="font-sans" letter-spacing="-2.5">
       Schema<tspan fill="#00F0FF">Link</tspan>
     </text>
-    <text x="310" y="68" fill="#64748B" font-size="15" class="mono">// STOP DUMPING 1,000 TABLES TO LLMs</text>
 
-    <!-- Subtitle -->
-    <text x="0" y="100" fill="#94A3B8" font-size="16" class="sans">
-      Deterministic Schema Retrieval &amp; Multi-Hop Join Resolution for Enterprise Text-to-SQL
+    <!-- The 2026 Pitch / Hook -->
+    <text x="0" y="275" fill="#F8FAFC" font-size="28" font-weight="700" class="font-sans" letter-spacing="-0.8">
+      1,000 tables in. <tspan fill="#00F0FF">The exact 3 tables out.</tspan>
     </text>
-  </g>
 
-  <!-- ==================== BEFORE / AFTER DUAL BENTO ==================== -->
+    <!-- Concise Subtitle -->
+    <text x="0" y="318" fill="#94A3B8" font-size="16" font-weight="400" class="font-sans">
+      Retrieves minimal relational schema and resolves multi-hop join paths.
+    </text>
+    <text x="0" y="342" fill="#64748B" font-size="15" font-weight="400" class="font-sans">
+      No row vectorization. No context overflow. Zero SQL hallucinations.
+    </text>
 
-  <!-- LEFT CARD: THE BROKEN WAY (WITHOUT SCHEMALINK) -->
-  <g transform="translate(80, 180)">
-    <rect width="520" height="370" rx="12" fill="url(#badCardBg)" stroke="url(#badBorder)" stroke-width="1.2" />
-
-    <!-- Card Header -->
-    <rect width="520" height="42" rx="12" fill="#1C0F13" fill-opacity="0.9" />
-    <path d="M 0 42 L 520 42" stroke="#7F1D1D" stroke-width="1" stroke-opacity="0.4" />
-    <circle cx="22" cy="21" r="5" fill="#EF4444" />
-    <text x="38" y="25" fill="#FCA5A5" font-size="12" font-weight="700" class="mono">WITHOUT SCHEMALINK: NAIVE TEXT-TO-SQL</text>
-
-    <!-- Symptom 1: Full DDL Dump -->
-    <g transform="translate(24, 60)">
-      <rect width="472" height="68" rx="6" fill="#0A0507" stroke="#450A0A" stroke-width="1" />
-      <text x="16" y="24" fill="#EF4444" font-size="11" font-weight="700" class="mono">[!] CONTEXT SATURATION (120,000+ TOKENS)</text>
-      <text x="16" y="44" fill="#94A3B8" font-size="12" class="mono">Prompt: Dump 400 tables DDL -> Context overflow</text>
-      <text x="16" y="58" fill="#64748B" font-size="11" class="mono">Result: Hallucinates random columns from other tables</text>
+    <!-- 3 High-Impact Pillars -->
+    <g transform="translate(0, 395)" class="font-mono">
+      <g transform="translate(0, 0)">
+        <rect width="135" height="48" rx="6" fill="#090E17" stroke="#1E293B" stroke-width="1" />
+        <text x="12" y="20" fill="#64748B" font-size="10" letter-spacing="0.5">INDEXING</text>
+        <text x="12" y="36" fill="#F1F5F9" font-size="12" font-weight="600">Zero Row RAG</text>
+      </g>
+      <g transform="translate(148, 0)">
+        <rect width="145" height="48" rx="6" fill="#090E17" stroke="#1E293B" stroke-width="1" />
+        <text x="12" y="20" fill="#64748B" font-size="10" letter-spacing="0.5">JOIN TOPOLOGY</text>
+        <text x="12" y="36" fill="#00F0FF" font-size="12" font-weight="600">Steiner Bridge</text>
+      </g>
+      <g transform="translate(306, 0)">
+        <rect width="135" height="48" rx="6" fill="#090E17" stroke="#1E293B" stroke-width="1" />
+        <text x="12" y="20" fill="#64748B" font-size="10" letter-spacing="0.5">LLM CONTEXT</text>
+        <text x="12" y="36" fill="#10B981" font-size="12" font-weight="600">-84% Tokens</text>
+      </g>
     </g>
 
-    <!-- Symptom 2: Disconnected Tables / Broken Join -->
-    <g transform="translate(24, 140)">
-      <rect width="472" height="68" rx="6" fill="#0A0507" stroke="#450A0A" stroke-width="1" />
-      <text x="16" y="24" fill="#EF4444" font-size="11" font-weight="700" class="mono">[!] BROKEN JOIN PATHS (NO BRIDGE DISCOVERY)</text>
-      <text x="16" y="44" fill="#94A3B8" font-size="12" class="mono">Query: "Customers who bought Laptops"</text>
-      <text x="16" y="58" fill="#F87171" font-size="11" class="mono">Error: Joins Customers -> Products directly (FAIL: 0 rows)</text>
-    </g>
-
-    <!-- Symptom 3: Privacy & Security Risk -->
-    <g transform="translate(24, 220)">
-      <rect width="472" height="68" rx="6" fill="#0A0507" stroke="#450A0A" stroke-width="1" />
-      <text x="16" y="24" fill="#EF4444" font-size="11" font-weight="700" class="mono">[!] RAW DATA VECTORIZATION HAZARD</text>
-      <text x="16" y="44" fill="#94A3B8" font-size="12" class="mono">Embedding 5M operational rows into vector DB</text>
-      <text x="16" y="58" fill="#F87171" font-size="11" class="mono">Result: PII leakage + cannot calculate exact SUM/AVG</text>
-    </g>
-
-    <!-- Bad Summary Badge -->
-    <g transform="translate(24, 305)">
-      <rect width="472" height="42" rx="6" fill="#2E0A0F" stroke="#7F1D1D" stroke-width="1" />
-      <text x="16" y="26" fill="#FCA5A5" font-size="12" font-weight="600" class="mono">ACCURACY: 42% · LATENCY: 4.8s · TOKENS: 125,000</text>
+    <!-- Dialects Footer Line -->
+    <g transform="translate(0, 495)" class="font-mono" font-size="11" fill="#475569">
+      <text x="0" y="0">CONNECTS WITH</text>
+      <text x="110" y="0" fill="#94A3B8">PostgreSQL · MySQL · SQLite · MSSQL · Snowflake</text>
     </g>
   </g>
 
-  <!-- VS DIVIDER BADGE -->
-  <g transform="translate(620, 345)">
-    <circle cx="20" cy="20" r="18" fill="#0B132B" stroke="#334155" stroke-width="1.5" />
-    <text x="13" y="25" fill="#94A3B8" font-size="11" font-weight="800" class="mono">VS</text>
+  <!-- ==================== RIGHT COLUMN: THE SCHEMA PRISM METAPHOR ==================== -->
+  <g transform="translate(680, 70)">
+
+    <!-- RAW DENSE DATABASE CHAOS (Unorganized background schema nodes) -->
+    <g opacity="0.35" class="font-mono" font-size="10">
+      <!-- Chaos Nodes -->
+      <g transform="translate(20, 40)">
+        <rect width="70" height="26" rx="4" fill="#0F172A" stroke="#334155" stroke-width="0.8" />
+        <text x="8" y="17" fill="#64748B">invoices</text>
+      </g>
+      <g transform="translate(105, 15)">
+        <rect width="80" height="26" rx="4" fill="#0F172A" stroke="#334155" stroke-width="0.8" />
+        <text x="8" y="17" fill="#64748B">user_logs</text>
+      </g>
+      <g transform="translate(200, 35)">
+        <rect width="70" height="26" rx="4" fill="#0F172A" stroke="#334155" stroke-width="0.8" />
+        <text x="8" y="17" fill="#64748B">sessions</text>
+      </g>
+      <g transform="translate(380, 45)">
+        <rect width="85" height="26" rx="4" fill="#0F172A" stroke="#334155" stroke-width="0.8" />
+        <text x="8" y="17" fill="#64748B">payments</text>
+      </g>
+      <g transform="translate(40, 430)">
+        <rect width="80" height="26" rx="4" fill="#0F172A" stroke="#334155" stroke-width="0.8" />
+        <text x="8" y="17" fill="#64748B">categories</text>
+      </g>
+      <g transform="translate(140, 445)">
+        <rect width="75" height="26" rx="4" fill="#0F172A" stroke="#334155" stroke-width="0.8" />
+        <text x="8" y="17" fill="#64748B">suppliers</text>
+      </g>
+      <g transform="translate(240, 435)">
+        <rect width="80" height="26" rx="4" fill="#0F172A" stroke="#334155" stroke-width="0.8" />
+        <text x="8" y="17" fill="#64748B">shipments</text>
+      </g>
+      <g transform="translate(350, 440)">
+        <rect width="80" height="26" rx="4" fill="#0F172A" stroke="#334155" stroke-width="0.8" />
+        <text x="8" y="17" fill="#64748B">audit_trail</text>
+      </g>
+
+      <!-- Faint convergence lines towards the SchemaLink Gateway -->
+      <path d="M 55 66 L 240 220" stroke="#334155" stroke-width="0.75" stroke-dasharray="2 3" />
+      <path d="M 145 41 L 240 220" stroke="#334155" stroke-width="0.75" stroke-dasharray="2 3" />
+      <path d="M 235 61 L 240 220" stroke="#334155" stroke-width="0.75" stroke-dasharray="2 3" />
+      <path d="M 420 71 L 280 220" stroke="#334155" stroke-width="0.75" stroke-dasharray="2 3" />
+      <path d="M 80 430 L 240 290" stroke="#334155" stroke-width="0.75" stroke-dasharray="2 3" />
+      <path d="M 175 445 L 250 290" stroke="#334155" stroke-width="0.75" stroke-dasharray="2 3" />
+      <path d="M 280 435 L 260 290" stroke="#334155" stroke-width="0.75" stroke-dasharray="2 3" />
+      <path d="M 390 440 L 280 290" stroke="#334155" stroke-width="0.75" stroke-dasharray="2 3" />
+    </g>
+
+    <!-- THE SCHEMALINK RESOLUTION CHAMBER (Central Prism Card) -->
+    <rect x="15" y="110" width="490" height="280" rx="14" fill="#070C15" fill-opacity="0.95" stroke="#1E293B" stroke-width="1.2" />
+
+    <!-- Terminal Micro-Bar -->
+    <rect x="15" y="110" width="490" height="34" rx="14" fill="#0A101D" />
+    <path d="M 15 144 L 505 144" stroke="#1E293B" stroke-width="1" />
+    <circle cx="35" cy="127" r="4" fill="#EF4444" fill-opacity="0.8" />
+    <circle cx="49" cy="127" r="4" fill="#F59E0B" fill-opacity="0.8" />
+    <circle cx="63" cy="127" r="4" fill="#10B981" fill-opacity="0.8" />
+    <text x="82" y="131" fill="#94A3B8" font-size="11" font-weight="500" class="font-mono">schemalink // path_finder.dag</text>
+    
+    <!-- Status Pill -->
+    <rect x="400" y="118" width="90" height="18" rx="4" fill="#042F2E" stroke="#10B981" stroke-width="0.75" />
+    <text x="410" y="131" fill="#34D399" font-size="10" font-weight="700" class="font-mono">RESOLVED</text>
+
+    <!-- Question Bubble -->
+    <g transform="translate(35, 160)">
+      <rect width="450" height="30" rx="5" fill="#04070D" stroke="#1E293B" stroke-width="0.8" />
+      <text x="12" y="19" fill="#94A3B8" font-size="11" class="font-mono">Q: &quot;Find customers who ordered electronics in California&quot;</text>
+    </g>
+
+    <!-- ================= RESOLVED CLEAN PATH (The Core Deliverable) ================= -->
+
+    <!-- Connection Pipeline Rays -->
+    <!-- Node 1 -> Node 2 -->
+    <line x1="140" y1="260" x2="190" y2="260" stroke="#00F0FF" stroke-width="2" />
+    <!-- Node 2 -> Node 3 -->
+    <line x1="310" y1="260" x2="360" y2="260" stroke="#00F0FF" stroke-width="2" />
+
+    <!-- Table 1: Customers -->
+    <g transform="translate(35, 225)">
+      <rect width="105" height="70" rx="8" fill="url(#resolvedCard)" stroke="url(#resolvedBorder)" stroke-width="1.2" />
+      <text x="12" y="24" fill="#FFFFFF" font-size="12" font-weight="700" class="font-sans">Customers</text>
+      <text x="12" y="42" fill="#00F0FF" font-size="10" class="font-mono">CustomerID</text>
+      <text x="12" y="56" fill="#64748B" font-size="9" class="font-mono">+12 pruned</text>
+    </g>
+
+    <!-- Table 2: Orders (Intermediate Bridge) -->
+    <g transform="translate(190, 225)">
+      <rect width="120" height="70" rx="8" fill="url(#resolvedCard)" stroke="url(#resolvedBorder)" stroke-width="1.5" />
+      <rect x="68" y="8" width="44" height="14" rx="3" fill="#042F2E" stroke="#10B981" stroke-width="0.6" />
+      <text x="72" y="18" fill="#34D399" font-size="8" font-weight="700" class="font-mono">BRIDGE</text>
+      <text x="12" y="24" fill="#FFFFFF" font-size="12" font-weight="700" class="font-sans">Orders</text>
+      <text x="12" y="42" fill="#00F0FF" font-size="10" class="font-mono">CustomerID</text>
+      <text x="12" y="56" fill="#38BDF8" font-size="10" class="font-mono">OrderID</text>
+    </g>
+
+    <!-- Table 3: Products -->
+    <g transform="translate(360, 225)">
+      <rect width="125" height="70" rx="8" fill="url(#resolvedCard)" stroke="url(#resolvedBorder)" stroke-width="1.2" />
+      <text x="12" y="24" fill="#FFFFFF" font-size="12" font-weight="700" class="font-sans">Products</text>
+      <text x="12" y="42" fill="#00F0FF" font-size="10" class="font-mono">ProductID</text>
+      <text x="12" y="56" fill="#10B981" font-size="9" class="font-mono">Category='Elec'</text>
+    </g>
+
+    <!-- Token Compaction Result Bar -->
+    <g transform="translate(35, 320)">
+      <rect width="450" height="48" rx="6" fill="#040812" stroke="#1E293B" stroke-width="1" />
+      <circle cx="16" cy="24" r="3.5" fill="#10B981" />
+      <text x="28" y="20" fill="#F8FAFC" font-size="11" font-weight="600" class="font-mono">Compact Schema: 3 tables · 9 columns · 2 join keys</text>
+      <text x="28" y="36" fill="#00F0FF" font-size="10" class="font-mono">320 tokens sent to Agent (84% reduction vs 2,150 full DDL)</text>
+      <text x="390" y="28" fill="#10B981" font-size="12" font-weight="700" class="font-mono">42ms</text>
+    </g>
   </g>
 
-  <!-- RIGHT CARD: THE SCHEMALINK WAY -->
-  <g transform="translate(680, 180)">
-    <rect width="520" height="370" rx="12" fill="url(#goodCardBg)" stroke="url(#goodBorder)" stroke-width="1.5" />
-
-    <!-- Card Header -->
-    <rect width="520" height="42" rx="12" fill="#071927" fill-opacity="0.9" />
-    <path d="M 0 42 L 520 42" stroke="#00F0FF" stroke-width="1" stroke-opacity="0.4" />
-    <circle cx="22" cy="21" r="5" fill="#00F0FF" />
-    <text x="38" y="25" fill="#38BDF8" font-size="12" font-weight="700" class="mono">WITH SCHEMALINK: HIGH-PRECISION SCHEMA RAG</text>
-
-    <!-- Feature 1: Zero Row Vectorization -->
-    <g transform="translate(24, 60)">
-      <rect width="472" height="68" rx="6" fill="#030A12" stroke="#082F49" stroke-width="1" />
-      <text x="16" y="24" fill="#00F0FF" font-size="11" font-weight="700" class="mono">[OK] ZERO ROW VECTORIZATION (SAFE &amp; LEAN)</text>
-      <text x="16" y="44" fill="#F1F5F9" font-size="12" class="mono">Indexes DDL, metadata, business terms &amp; enums only</text>
-      <text x="16" y="58" fill="#38BDF8" font-size="11" class="mono">Database remains single source of truth for records</text>
-    </g>
-
-    <!-- Feature 2: NetworkX Steiner Bridge Discovery -->
-    <g transform="translate(24, 140)">
-      <rect width="472" height="68" rx="6" fill="#030A12" stroke="#082F49" stroke-width="1" />
-      <text x="16" y="24" fill="#00F0FF" font-size="11" font-weight="700" class="mono">[OK] DETERMINISTIC MULTI-HOP JOIN RESOLUTION</text>
-      <text x="16" y="44" fill="#F1F5F9" font-size="12" class="mono">Auto-injects Orders &amp; Order_Items bridge tables</text>
-      <text x="16" y="58" fill="#34D399" font-size="11" class="mono">Guaranteed valid join path: Cust -> Orders -> Items -> Prod</text>
-    </g>
-
-    <!-- Feature 3: Token Compactor & Compact DDL -->
-    <g transform="translate(24, 220)">
-      <rect width="472" height="68" rx="6" fill="#030A12" stroke="#082F49" stroke-width="1" />
-      <text x="16" y="24" fill="#00F0FF" font-size="11" font-weight="700" class="mono">[OK] -84% TOKEN COMPACTION &amp; HITL SUPERVISION</text>
-      <text x="16" y="44" fill="#F1F5F9" font-size="12" class="mono">Prunes irrelevant columns -> sends only 32 lines DDL</text>
-      <text x="16" y="58" fill="#38BDF8" font-size="11" class="mono">Exemplar Memory Store learns from approved feedback</text>
-    </g>
-
-    <!-- Good Summary Badge -->
-    <g transform="translate(24, 305)">
-      <rect width="472" height="42" rx="6" fill="#062235" stroke="#00F0FF" stroke-width="1" />
-      <text x="16" y="26" fill="#38BDF8" font-size="12" font-weight="700" class="mono">ACCURACY: 96% · LATENCY: 42ms · TOKENS: 320</text>
-    </g>
-  </g>
-
-  <!-- ==================== FOOTER SPEC BAR ==================== -->
-  <g transform="translate(80, 580)">
-    <line x1="0" y1="0" x2="1120" y2="0" stroke="#1E293B" stroke-width="1" />
-    <text x="0" y="22" fill="#475569" font-size="11" class="mono">COMPATIBLE ENGINES: POSTGRESQL · MYSQL · SQLITE · MSSQL · SNOWFLAKE</text>
-    <text x="760" y="22" fill="#00F0FF" font-size="11" font-weight="600" class="mono">OPEN SOURCE // MIT LICENSE // PYTHON 3.11+</text>
-  </g>
+  <!-- Technical Spec Footer Perimeter -->
+  <line x1="88" y1="586" x2="1192" y2="586" stroke="#1E293B" stroke-width="1" />
+  <text x="88" y="608" fill="#475569" font-size="11" class="font-mono" letter-spacing="0.5">SCHEMALINK ARCHITECTURE // DECOUPLED SCHEMA RETRIEVAL</text>
+  <text x="1035" y="608" fill="#475569" font-size="11" class="font-mono">OPEN SOURCE // MIT</text>
 </svg>

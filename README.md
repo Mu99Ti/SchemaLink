@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/banner.svg" alt="SchemaLink Banner" width="100%" />
+  <img src="assets/banner.png" alt="SchemaLink Banner" width="100%" />
 
   # SchemaLink
   ### High-Precision Schema RAG & Discovery Engine for Text-to-SQL

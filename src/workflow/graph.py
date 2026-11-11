@@ -99,10 +99,19 @@ class SchemaLinkWorkflow:
 
     def assemble_final_context(self, state: WorkflowState) -> WorkflowState:
         # Apply user feedback if provided
-        final_tables = state.candidate_tables
+        final_tables = list(state.candidate_tables)
         if state.user_approved_tables is not None:
             approved_set = set(state.user_approved_tables)
             final_tables = [t for t in state.candidate_tables if t[0].table_name in approved_set]
+            existing_names = {t[0].table_name for t in final_tables}
+
+            # If user added a table not previously in candidates, fetch it
+            for t_name in approved_set:
+                if t_name not in existing_names:
+                    res = self.hybrid_store.search_tables(t_name, database_id=state.database_id, top_k=1)
+                    if res:
+                        final_tables.append((res[0][0], 1.0))
+                    existing_names.add(t_name)
 
         final_columns = state.candidate_columns
         if state.user_approved_columns is not None:
